@@ -15,7 +15,8 @@ add_executable(memalloc_tests
     align_test.cpp
     arena_test.cpp
     slab_test.cpp
-    tlsf_test.cpp)
+    tlsf_test.cpp
+    tlsf_alloc_test.cpp)
 
 target_link_libraries(memalloc_tests PRIVATE
     memalloc

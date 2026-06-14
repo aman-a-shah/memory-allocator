@@ -14,4 +14,5 @@ compile_commands.json
 .DS_Store
 .vscode/
 .idea/
-plan.nd
+plan.md
+phases.md

@@ -11,7 +11,9 @@ namespace {
 
 // Allocates a BlockHeader with a stable address (deque never relocates).
 BlockHeader* make_block(std::deque<BlockHeader>& store, std::uint32_t size) {
-    store.push_back(BlockHeader{size, 0, nullptr, nullptr});
+    BlockHeader b{};
+    b.size = size;
+    store.push_back(b);
     return &store.back();
 }
 
