@@ -13,7 +13,8 @@ FetchContent_MakeAvailable(googletest)
 add_executable(memalloc_tests
     smoke_test.cpp
     align_test.cpp
-    arena_test.cpp)
+    arena_test.cpp
+    slab_test.cpp)
 
 target_link_libraries(memalloc_tests PRIVATE
     memalloc
