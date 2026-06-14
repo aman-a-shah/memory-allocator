@@ -33,7 +33,8 @@ target_compile_options(memalloc_warnings INTERFACE
 add_library(memalloc STATIC
     src/memalloc.cpp
     src/arena.cpp
-    src/slab.cpp)
+    src/slab.cpp
+    src/tlsf.cpp)
 
 target_include_directories(memalloc PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
