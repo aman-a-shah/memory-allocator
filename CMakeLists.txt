@@ -31,7 +31,8 @@ target_compile_options(memalloc_warnings INTERFACE
 # Core library (empty for Phase 0 — just proves the build wiring works)
 # ---------------------------------------------------------------------------
 add_library(memalloc STATIC
-    src/memalloc.cpp)
+    src/memalloc.cpp
+    src/arena.cpp)
 
 target_include_directories(memalloc PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)

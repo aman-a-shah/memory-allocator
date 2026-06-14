@@ -11,7 +11,9 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_executable(memalloc_tests
-    smoke_test.cpp)
+    smoke_test.cpp
+    align_test.cpp
+    arena_test.cpp)
 
 target_link_libraries(memalloc_tests PRIVATE
     memalloc
