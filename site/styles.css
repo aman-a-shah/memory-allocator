@@ -1,0 +1,405 @@
+/* ============================================================================
+   Memalloc research note — design system (per QUANT_SHOWCASE_STYLE.md)
+   Tokens, type scale, layout, components, chart classes, motion, print block.
+   ========================================================================== */
+
+:root {
+  /* paper / surfaces — true near-white, faint cool cast (never cream) */
+  --paper:      oklch(0.989 0.0015 250);
+  --paper-2:    oklch(0.971 0.003 252);   /* figure / panel background */
+  --paper-3:    oklch(0.955 0.004 252);   /* row hover, in-sample shade */
+
+  /* ink ramp */
+  --ink:        oklch(0.235 0.012 264);   /* headings / near-black     (16.2:1) */
+  --body:       oklch(0.330 0.012 264);   /* body text                 (11.8:1) */
+  --muted:      oklch(0.475 0.012 264);   /* captions / secondary      (6.5:1)  */
+  --faint:      oklch(0.550 0.012 264);   /* axis ticks                (4.7:1)  */
+
+  --rule:       oklch(0.885 0.004 258);   /* hairlines                 */
+  --rule-soft:  oklch(0.930 0.003 258);   /* lighter hairlines / grid  */
+
+  /* accent — crimson (the ONLY brand color) */
+  --accent:     oklch(0.505 0.182 21);    /* lines, dots, markers      (6.3:1)  */
+  --accent-ink: oklch(0.430 0.176 21);    /* crimson text/links        (8.6:1)  */
+  --accent-12:  oklch(0.505 0.182 21 / 0.12);  /* fills */
+  --accent-22:  oklch(0.505 0.182 21 / 0.22);  /* selection */
+
+  /* second data series — muted slate-blue (charts only) */
+  --data2:      oklch(0.520 0.085 248);   /* second line / bars        (5.3:1)  */
+  --data2-12:   oklch(0.520 0.085 248 / 0.14);
+
+  /* metrics */
+  --maxw: 50rem;   /* prose measure ≈ 70ch */
+  --figw: 64rem;   /* figures/tables break wider */
+  --gap: clamp(1rem, 2.5vw, 2rem);
+
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);  /* ease-out-quint */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--body);
+  font: 380 clamp(1.02rem, 0.97rem + 0.3vw, 1.18rem)/1.62 var(--serif);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--accent-22); }
+
+/* ---- typography --------------------------------------------------------- */
+h1, h2, h3 { color: var(--ink); text-wrap: balance; margin: 0; }
+p { text-wrap: pretty; }
+
+h1 {
+  font-weight: 600;
+  font-size: clamp(2.9rem, 1.8rem + 5.4vw, 5.6rem);
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+}
+.lede {
+  font-weight: 360;
+  font-size: clamp(1.18rem, 1.06rem + 0.6vw, 1.5rem);
+  line-height: 1.5;
+  color: var(--ink);
+}
+h2 {
+  font-weight: 600;
+  font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.5rem);
+  letter-spacing: -0.018em;
+  line-height: 1.08;
+}
+h3 { font-weight: 600; font-size: 1.18rem; margin-bottom: 0.3rem; }
+strong { font-weight: 640; color: var(--ink); }
+
+a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid var(--accent-12); }
+a:hover { border-bottom-color: var(--accent); }
+
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; letter-spacing: -0.01em; }
+.num  { font-family: var(--mono); font-feature-settings: "tnum" 1; letter-spacing: -0.01em; color: var(--ink); }
+.crimson { color: var(--accent-ink); }
+
+/* ---- layout ------------------------------------------------------------- */
+.wrap { width: min(100% - 2.5rem, var(--figw)); margin-inline: auto; }
+
+.prose > p, .prose > h2, .prose > h3, .prose .section-head,
+.prose > ul, .prose > ol, .prose .equation, .prose .throughput {
+  max-width: var(--maxw);
+  margin-inline: auto;
+}
+.prose > p { margin: 0 auto 1rem; }
+.prose > ul, .prose > ol { margin: 0 auto 1rem; padding-left: 1.2rem; }
+.prose li { margin-bottom: 0.35rem; }
+
+section { padding-block: clamp(2.6rem, 6vw, 4.6rem); }
+section + section { border-top: 1px solid var(--rule); }
+
+/* ---- masthead ----------------------------------------------------------- */
+.masthead { padding-top: clamp(2.4rem, 6vw, 4.4rem); }
+.dateline {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 1.4rem;
+}
+.dateline .crimson { color: var(--accent-ink); }
+.masthead h1 { margin-bottom: 1.2rem; max-width: 18ch; }
+.masthead .lede { max-width: 54ch; margin-bottom: 2rem; }
+.byline { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); margin-bottom: 2rem; }
+.byline span { color: var(--ink); }
+
+/* ---- abstract-stats strip ---------------------------------------------- */
+.abstract-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-block: 1px solid var(--rule);
+  margin: 2rem 0;
+}
+.abstract-stats > div { padding: 1rem 1.1rem; border-left: 1px solid var(--rule-soft); }
+.abstract-stats > div:first-child { border-left: 0; padding-left: 0; }
+.abstract-stats dt { color: var(--muted); font-size: 0.74rem; margin-bottom: 0.4rem; }
+.abstract-stats dd {
+  margin: 0;
+  font: 500 clamp(1.2rem, 1rem + 0.9vw, 1.7rem) var(--mono);
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.abstract-stats dd small { font-size: 0.55em; color: var(--muted); font-weight: 400; }
+
+/* ---- TOC ---------------------------------------------------------------- */
+.toc {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--rule);
+  margin-top: 2.4rem;
+}
+.toc a {
+  border: 0;
+  border-left: 1px solid var(--rule-soft);
+  padding: 0.9rem 1rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  color: var(--body);
+}
+.toc a:first-child { border-left: 0; padding-left: 0; }
+.toc a:hover { background: var(--paper-3); }
+.toc .n { font-family: var(--mono); font-size: 0.78rem; color: var(--accent-ink); }
+.toc .t { font-size: 0.92rem; }
+
+/* ---- section heading ---------------------------------------------------- */
+.section-head { display: flex; align-items: baseline; gap: 0.9rem; margin-bottom: 1.3rem; }
+.section-no { font-family: var(--mono); font-size: 1rem; color: var(--accent-ink); font-weight: 500; }
+
+/* ---- figures ------------------------------------------------------------ */
+figure { margin: 1.8rem auto; max-width: var(--figw); }
+.chart {
+  width: 100%;
+  height: 320px;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.chart svg { display: block; width: 100%; height: 100%; }
+figcaption { font-size: 0.86rem; color: var(--muted); margin-top: 0.85rem; max-width: 60ch; }
+.fignum { color: var(--accent-ink); font-family: var(--mono); font-size: 0.78rem; letter-spacing: -0.01em; }
+
+/* ---- chart primitives (renderers reference these) ---------------------- */
+.c-grid { stroke: var(--rule-soft); }
+.c-axis { stroke: var(--rule); }
+.c-tick { fill: var(--faint); font: 10px var(--mono); }
+.c-tick-x { text-anchor: middle; }
+.c-tick-y { text-anchor: end; }
+.c-line { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.c-line-accent { stroke: var(--accent); }
+.c-line-data2 { stroke: var(--data2); }
+.c-line-dash { stroke-dasharray: 4 4; }
+.c-line-thin { stroke-width: 1.1; }
+.c-area-accent { fill: var(--accent-12); stroke: none; }
+.c-area-data2 { fill: var(--data2-12); stroke: none; }
+.c-band { stroke: var(--faint); stroke-dasharray: 3 4; fill: none; }
+.c-band-fill { fill: var(--accent-12); stroke: none; }
+.c-dot { fill: var(--ink); }
+.c-dot-accent { fill: var(--accent); }
+.c-dot-data2 { fill: var(--data2); }
+.c-bar { fill: var(--data2); }
+.c-bar-accent { fill: var(--accent); }
+.c-marker { stroke: var(--accent); stroke-width: 1.4; }
+.c-marker-label { fill: var(--accent-ink); font: 10px var(--mono); }
+.c-legend { font: 11px var(--mono); fill: var(--muted); }
+.c-axis-label { fill: var(--muted); font: 10px var(--mono); }
+.c-val { fill: var(--ink); font: 10px var(--mono); }
+.c-val-accent { fill: var(--accent-ink); font: 10px var(--mono); }
+
+/* ---- pipeline diagram --------------------------------------------------- */
+.pipeline { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 1.6rem auto; max-width: var(--figw); }
+.pipeline .stage {
+  flex: 1 1 0; min-width: 0;
+  border: 1px solid var(--rule);
+  padding: 0.85rem 0.9rem;
+  background: var(--paper-2);
+}
+.pipeline .stage.accent { box-shadow: inset 0 0 0 1px var(--accent-12); border-color: var(--accent-12); }
+.pipeline .stage .sn { font-family: var(--mono); font-size: 0.72rem; color: var(--accent-ink); }
+.pipeline .stage .sl { display: block; color: var(--ink); font-weight: 600; font-size: 0.96rem; margin-top: 0.15rem; }
+.pipeline .stage .ss { display: block; color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.35; }
+.pipeline .flow { align-self: center; font-family: var(--mono); color: var(--faint); padding: 0 0.5rem; }
+
+/* ---- parameter grid ----------------------------------------------------- */
+.param-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-block: 1px solid var(--rule);
+  margin: 1.6rem auto;
+  max-width: var(--figw);
+}
+.param-grid > div { padding: 0.9rem 1rem; border-left: 1px solid var(--rule-soft); }
+.param-grid > div:first-child { border-left: 0; padding-left: 0; }
+.param-grid .k { font-family: var(--serif); font-style: italic; color: var(--accent-ink); font-size: 1.05rem; }
+.param-grid .v { font-family: var(--mono); color: var(--ink); font-size: 1.05rem; margin: 0.2rem 0; font-feature-settings: "tnum" 1; }
+.param-grid .d { color: var(--muted); font-size: 0.74rem; line-height: 1.35; }
+
+/* ---- data tables -------------------------------------------------------- */
+.table-figure { max-width: var(--figw); margin: 1.8rem auto; }
+.data-table { width: 100%; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+thead th {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+}
+thead th:first-child, tbody td:first-child { text-align: left; }
+tbody td {
+  text-align: right;
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  color: var(--ink);
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--rule-soft);
+  white-space: nowrap;
+}
+tbody td:first-child { font-family: var(--serif); color: var(--body); }
+tbody tr:hover { background: var(--paper-3); }
+.row-pass td:first-child::before,
+.row-fail td:first-child::before {
+  content: "";
+  display: inline-block;
+  width: 0.6em; height: 0.6em;
+  margin-right: 0.5em;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.row-pass td:first-child::before { background: var(--accent); }
+.row-fail td:first-child::before { border: 1.5px solid var(--faint); }
+td.pos { color: var(--accent-ink); }
+
+/* ---- throughput / hero-number callout ----------------------------------- */
+.throughput {
+  display: flex;
+  gap: 1.4rem;
+  align-items: baseline;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.1rem;
+  margin: 1.8rem auto;
+}
+.throughput .big {
+  font: 500 clamp(2.4rem, 1.6rem + 3.6vw, 4rem) var(--mono);
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1;
+}
+.throughput .big .crimson { color: var(--accent-ink); }
+.throughput p { color: var(--muted); font-size: 0.95rem; margin: 0; }
+
+/* ---- equation ----------------------------------------------------------- */
+.equation { margin: 1.4rem auto; text-align: center; overflow-x: auto; }
+.katex { color: var(--ink); }
+.eqn-note { font-size: 0.8rem; color: var(--muted); text-align: center; margin-top: 0.4rem; }
+
+/* ---- colophon ----------------------------------------------------------- */
+.colophon { background: var(--paper-2); }
+.colophon .repro {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 1rem 1.2rem;
+  border-radius: 3px;
+  overflow-x: auto;
+  max-width: var(--maxw);
+  margin: 1.2rem auto 0;
+}
+.colophon .repro .c { color: var(--faint); }
+.fineprint { font-size: 0.78rem; color: var(--muted); max-width: var(--maxw); margin: 1rem auto 0; }
+
+/* ---- reading progress bar ---------------------------------------------- */
+.progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 50; }
+.progress span {
+  display: block; height: 100%;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
+/* ---- motion (screen only) ---------------------------------------------- */
+.js .reveal { opacity: 0; transform: translateY(14px); }
+.js .reveal.in { opacity: 1; transform: none; transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal, .js .reveal.in { opacity: 1; transform: none; transition: none; }
+  .progress span { display: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* ---- responsive --------------------------------------------------------- */
+@media (max-width: 720px) {
+  .abstract-stats, .param-grid { grid-template-columns: repeat(2, 1fr); }
+  .abstract-stats > div:nth-child(3), .param-grid > div:nth-child(3) { border-left: 0; padding-left: 0; }
+  .pipeline .stage { flex: 1 1 100%; }
+  .pipeline .flow { display: none; }
+}
+
+/* ============================================================================
+   PRINT — the canonical deliverable (per §11)
+   ========================================================================== */
+@page { size: Letter; margin: 14mm 15mm 15mm; }
+
+@media print {
+  /* 1. preserve color */
+  *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* 2. kill motion & interactive chrome */
+  .js .reveal, .js .reveal.in { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .js .c-line.draw { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+  .progress { display: none !important; }
+  a { color: var(--ink); border-bottom: 0; }
+
+  /* 3. re-assert wide layout (content box < 720px in print) */
+  .wrap { width: 100%; }
+  .abstract-stats, .param-grid { grid-template-columns: repeat(4, 1fr); }
+  .abstract-stats > div, .param-grid > div { border-left: 1px solid var(--rule-soft); }
+  .abstract-stats > div:first-child, .param-grid > div:first-child { border-left: 0; }
+  .pipeline { flex-wrap: nowrap; }
+  .pipeline .stage { flex: 1 1 0; min-width: 0; }
+  .pipeline .flow { display: block; }
+
+  /* 4. pagination — keep charts/equations/callouts whole, let tables flow */
+  figure:not(.table-figure), .param-grid, .pipeline, .throughput,
+  .equation, .repro { break-inside: avoid; }
+  tr { break-inside: avoid; } thead { display: table-header-group; }
+  .table-figure { break-inside: auto; } .table-figure figcaption { break-before: avoid; }
+  h1, h2, h3, .section-head { break-after: avoid; } .section-head + p { break-before: avoid; }
+  .colophon { break-inside: avoid; }
+
+  /* 5. tables fit with auto layout */
+  .data-table { overflow: visible; }
+  table { font-size: 8.7pt; width: 100%; }
+  thead th, tbody td { white-space: nowrap; padding-inline: 0.55rem; }
+
+  /* 6. density + per-chart print heights */
+  body { font-size: 9.7pt; line-height: 1.45; }
+  .masthead { padding: 0 0 0.5rem; } .masthead h1 { font-size: 2.6rem; }
+  .masthead .lede { font-size: 1.02rem; }
+  section { padding-block: 0.7rem; } .prose > p { margin-bottom: 0.55rem; }
+  figure { margin: 0.65rem auto; } figcaption { margin-top: 0.4rem; font-size: 0.82rem; }
+  .equation { margin: 0.7rem auto !important; }
+  .abstract-stats, .toc, .param-grid, .throughput { margin: 0.7rem auto; }
+  .pipeline { margin: 0.7rem auto; }
+  h3 { margin-top: 0.3rem; }
+  p { orphans: 2; widows: 2; }
+
+  .chart { height: 178px; }
+  #fig-hero { height: 224px; }
+  #fig-throughput { height: 182px; }
+  #fig-bysize { height: 182px; }
+  #fig-scaling { height: 192px; }
+  #fig-frag { height: 170px; }
+  #fig-stability { height: 165px; }
+
+  /* Compact the colophon so it packs onto the preceding page (no orphan). */
+  .colophon { padding-block: 0.7rem; }
+  .colophon h2 { font-size: 1.5rem; }
+  .colophon p { margin-bottom: 0.4rem; }
+  .colophon .repro { font-size: 8pt; padding: 0.7rem 0.9rem; line-height: 1.5; }
+  .fineprint { margin-top: 0.5rem; }
+}

@@ -34,12 +34,16 @@ add_library(memalloc STATIC
     src/memalloc.cpp
     src/arena.cpp
     src/slab.cpp
-    src/tlsf.cpp)
+    src/tlsf.cpp
+    src/allocator.cpp
+    src/concurrent.cpp)
 
 target_include_directories(memalloc PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
+find_package(Threads REQUIRED)
 target_link_libraries(memalloc PRIVATE memalloc_warnings)
+target_link_libraries(memalloc PUBLIC Threads::Threads)
 
 # ---------------------------------------------------------------------------
 # Tests & benchmarks

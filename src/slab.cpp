@@ -15,8 +15,9 @@ constexpr std::size_t kMinSlotBytes = sizeof(void*);
 
 SlabPool::SlabPool(Arena& arena, std::size_t slot_size,
                    std::size_t slot_alignment,
-                   std::size_t slots_per_block) noexcept
-    : arena_(arena) {
+                   std::size_t slots_per_block,
+                   SlabBlockObserver* observer) noexcept
+    : arena_(arena), observer_(observer) {
     // Alignment must be a power of two and large enough for a pointer so the
     // intrusive FreeNode stored in a free slot is itself aligned.
     std::size_t align = std::max(slot_alignment, alignof(void*));
@@ -53,6 +54,10 @@ bool SlabPool::grow() noexcept {
     capacity_ += slots_per_block_;
     free_count_ += slots_per_block_;
     ++block_count_;
+
+    if (observer_ != nullptr) {
+        observer_->on_slab_block(this, block, block_bytes);
+    }
     return true;
 }
 

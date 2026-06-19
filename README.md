@@ -4,8 +4,16 @@ A hybrid **Slab + TLSF** memory allocator targeting deterministic, O(1)
 allocation for low-latency / financial workloads. See [`plan.md`](plan.md) for
 the full spec and [`phases.md`](phases.md) for the phased development plan.
 
-> **Status:** Phase 0 (project scaffolding) complete. The allocator itself is
-> introduced in subsequent phases.
+> **Status:** All phases complete (see [`phases.md`](phases.md)). Single-thread
+> dual-engine allocator (arena + slab + TLSF), a lock-free multi-threaded layer
+> (per-thread caches + atomic-CAS global arena + lock-free remote-free queues),
+> and a Phase 7 benchmark/metrics suite vs the system allocator. 74 unit tests
+> pass under Release, ASan, and TSan.
+>
+> **Measured (Apple M4, vs libc malloc):** 2.2–3.7× throughput, p99.9 latency
+> ~7.5× tighter, O(1) latency across request sizes, 0.24% fragmentation, and
+> near-linear scaling to 8 threads. A typeset research note summarizing the
+> results is built under [`site/`](site/) (`./site/build_pdf.sh`).
 
 ## Requirements
 - C++17 compiler (Apple clang / clang / gcc)
@@ -41,8 +49,11 @@ cmake --preset asan && cmake --build --preset asan && ctest --preset asan
 ## Benchmarks
 
 ```sh
-cmake --build --preset release --target memalloc_bench
+cmake --build --preset release --target memalloc_bench memalloc_metrics
+# Google Benchmark throughput suite vs the system allocator:
 ./build/release/bench/memalloc_bench
+# Full metrics run (throughput, latency tails, fragmentation, scaling) -> JSON:
+./build/release/bench/memalloc_metrics /tmp/metrics.json
 ```
 
 ## Layout

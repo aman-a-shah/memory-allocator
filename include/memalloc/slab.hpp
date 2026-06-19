@@ -25,15 +25,32 @@
 
 namespace memalloc {
 
+class SlabPool;
+
+// Optional hook invoked whenever a pool carves a new block from the Arena. A
+// higher layer (e.g. the unified Allocator) uses it to record which address
+// ranges belong to which pool, so deallocate() can be routed by address without
+// reintroducing a per-object header (which would break the zero-header design).
+class SlabBlockObserver {
+public:
+    virtual void on_slab_block(SlabPool* pool, void* base,
+                               std::size_t bytes) noexcept = 0;
+
+protected:
+    ~SlabBlockObserver() = default;
+};
+
 class SlabPool {
 public:
     // Creates a pool of `slot_size`-byte slots aligned to `slot_alignment`.
     // The effective slot size is rounded up so that (a) it can hold the
     // intrusive free-list pointer and (b) it is a multiple of the alignment;
     // the effective alignment is at least alignof(void*). The pool grows by
-    // `slots_per_block` slots per Arena request.
+    // `slots_per_block` slots per Arena request. If `observer` is non-null it is
+    // notified of every block the pool carves from the Arena.
     SlabPool(Arena& arena, std::size_t slot_size, std::size_t slot_alignment,
-             std::size_t slots_per_block = 64) noexcept;
+             std::size_t slots_per_block = 64,
+             SlabBlockObserver* observer = nullptr) noexcept;
 
     // Non-copyable, non-movable: holds a reference to its Arena and raw
     // free-list pointers into it.
@@ -72,6 +89,7 @@ private:
     bool grow() noexcept;
 
     Arena& arena_;
+    SlabBlockObserver* observer_;
     FreeNode* free_head_ = nullptr;
     std::size_t slot_size_;
     std::size_t slot_alignment_;

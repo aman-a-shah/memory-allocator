@@ -20,6 +20,12 @@ public:
     // capacity(). Throws std::bad_alloc if the mapping fails.
     explicit Arena(std::size_t capacity_bytes);
 
+    // Adopts a caller-owned, already-mapped region of `capacity_bytes` starting
+    // at `base`. The Arena does NOT own the mapping: its destructor will not
+    // munmap it. Used by the concurrent layer, where each thread's cache runs an
+    // engine over a superblock carved from one global mmap region.
+    Arena(void* base, std::size_t capacity_bytes) noexcept;
+
     ~Arena();
 
     // Non-copyable (owns a unique OS mapping).
@@ -60,6 +66,7 @@ private:
     char* base_ = nullptr;       // start of the mmap region
     std::size_t capacity_ = 0;   // page-rounded reserved size
     std::size_t offset_ = 0;     // bump cursor (bytes used from base_)
+    bool owns_mapping_ = true;   // false for adopted/borrowed regions
 };
 
 }  // namespace memalloc

@@ -35,30 +35,42 @@ Arena::Arena(std::size_t capacity_bytes) {
     offset_ = 0;
 }
 
+Arena::Arena(void* base, std::size_t capacity_bytes) noexcept
+    : base_(static_cast<char*>(base)),
+      capacity_(capacity_bytes),
+      offset_(0),
+      owns_mapping_(false) {}
+
 Arena::~Arena() {
-    if (base_ != nullptr) {
+    if (base_ != nullptr && owns_mapping_) {
         ::munmap(base_, capacity_);
     }
 }
 
 Arena::Arena(Arena&& other) noexcept
-    : base_(other.base_), capacity_(other.capacity_), offset_(other.offset_) {
+    : base_(other.base_),
+      capacity_(other.capacity_),
+      offset_(other.offset_),
+      owns_mapping_(other.owns_mapping_) {
     other.base_ = nullptr;
     other.capacity_ = 0;
     other.offset_ = 0;
+    other.owns_mapping_ = true;
 }
 
 Arena& Arena::operator=(Arena&& other) noexcept {
     if (this != &other) {
-        if (base_ != nullptr) {
+        if (base_ != nullptr && owns_mapping_) {
             ::munmap(base_, capacity_);
         }
         base_ = other.base_;
         capacity_ = other.capacity_;
         offset_ = other.offset_;
+        owns_mapping_ = other.owns_mapping_;
         other.base_ = nullptr;
         other.capacity_ = 0;
         other.offset_ = 0;
+        other.owns_mapping_ = true;
     }
     return *this;
 }

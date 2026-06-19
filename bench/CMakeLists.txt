@@ -12,9 +12,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(benchmark)
 
 add_executable(memalloc_bench
-    smoke_bench.cpp)
+    alloc_bench.cpp)
 
 target_link_libraries(memalloc_bench PRIVATE
     memalloc
     memalloc_warnings
     benchmark::benchmark)
+
+# Standalone metrics generator: replays the HFT trace and writes the research
+# note's data.json (throughput, latency tails, fragmentation, scalability).
+add_executable(memalloc_metrics
+    metrics.cpp)
+
+target_link_libraries(memalloc_metrics PRIVATE
+    memalloc
+    memalloc_warnings)
