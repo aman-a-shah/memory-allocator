@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>A Deterministic O(1) Allocator for Low-Latency Trading — Research Note</title>
+<title>A Deterministic Allocator — Research Note</title>
 <meta name="description" content="A hybrid Slab + TLSF memory allocator: O(1) worst-case allocation, lock-free multithreading, and measured results against the system allocator.">
 <script>document.documentElement.classList.replace('no-js','js')</script>
 <!-- Assets are vendored locally (site/vendor) so the page renders fully offline,
@@ -24,27 +24,26 @@
 
   <!-- ================= MASTHEAD ================= -->
   <header class="masthead">
-    <div class="dateline mono"><span class="crimson">Memalloc</span> · Systems Research Note · C++17</div>
-    <h1>A deterministic O(1) allocator for low-latency trading</h1>
-    <p class="lede">A hybrid <strong>slab + TLSF</strong> allocator that serves every <span class="mono">malloc</span>/<span class="mono">free</span> in constant worst-case time, runs lock-free across threads, and trades a single user-space <span class="mono">mmap</span> region between two purpose-built engines — measured here against the platform's own allocator.</p>
-    <div class="byline mono">Workload: synthetic HFT order/execution trace · Baseline: <span>Apple libc malloc</span> · <span id="meta-host" data-stat="meta.host">Apple silicon</span></div>
+    <div class="dateline mono"><span class="crimson">Research note</span> · hybrid slab + TLSF · reproducible</div>
+    <h1>A deterministic allocator</h1>
+    <p class="lede">A hybrid <strong>slab + TLSF</strong> allocator that serves every <span class="mono">malloc</span>/<span class="mono">free</span> in constant worst-case time, runs lock-free across threads, and partitions one user-space <span class="mono">mmap</span> region between two purpose-built engines. Every figure on this page is rendered from a live run.</p>
 
     <dl class="abstract-stats" aria-label="Headline results">
       <div>
-        <dt>Throughput vs system</dt>
-        <dd><span data-stat="headline.speedup_tlsf" data-fmt="num1">—</span>×<small> TLSF path</small></dd>
+        <dt>Throughput vs malloc (slab)</dt>
+        <dd><span data-stat="headline.speedup_slab" data-fmt="num1">—</span>×</dd>
       </div>
       <div>
-        <dt>Worst-case latency</dt>
-        <dd><span data-stat="headline.tail_ratio" data-fmt="num1">—</span>×<small> tighter, p99.9</small></dd>
+        <dt>Allocation latency, p99.9</dt>
+        <dd><span data-stat="headline.p999_custom_ns" data-fmt="int">—</span> ns</dd>
       </div>
       <div>
         <dt>Fragmentation</dt>
-        <dd><span data-stat="headline.fragmentation_pct" data-fmt="num2">—</span>%<small> of live bytes</small></dd>
+        <dd><span data-stat="headline.fragmentation_pct" data-fmt="num2">—</span>%</dd>
       </div>
       <div>
-        <dt>Time complexity</dt>
-        <dd>O(1)<small> all sizes</small></dd>
+        <dt>Worst-case time</dt>
+        <dd>O(1)</dd>
       </div>
     </dl>
 
@@ -63,11 +62,9 @@
     </nav>
   </header>
 
-  <!-- ================= 01 ARCHITECTURE ================= -->
-  <section id="arch">
-    <div class="section-head"><span class="section-no mono">01</span><h2>Dual-engine architecture</h2></div>
-
-    <p>At startup the allocator reserves one large contiguous region from the OS with <span class="mono">mmap(MAP_PRIVATE | MAP_ANONYMOUS)</span> and manages it entirely in user space — there are no kernel transitions on the critical path. A size router splits each request between two engines tuned for the two allocation shapes a trading system actually produces: a flood of <strong>fixed-size records</strong> (orders, executions, tick updates) and a smaller stream of <strong>variable-length</strong> ingestion buffers.</p>
+  <!-- ================= OVERVIEW (unnumbered) ================= -->
+  <section class="overview" id="overview">
+    <p>At startup the allocator reserves one large contiguous region from the OS with <span class="mono">mmap(MAP_PRIVATE | MAP_ANONYMOUS)</span> and manages it entirely in user space — no kernel transitions on the critical path. A size router splits each request between two engines tuned for the two allocation shapes a trading system actually produces: a flood of <strong>fixed-size records</strong> (orders, executions, ticks) and a smaller stream of <strong>variable-length</strong> ingestion buffers. A lock-free thread layer then replicates the pair per core.</p>
 
     <div class="pipeline" aria-label="Allocation pipeline">
       <div class="stage"><span class="sn mono">00</span><span class="sl">OS arena</span><span class="ss"><span class="mono">mmap</span> region, bump-carved into superblocks</span></div>
@@ -78,6 +75,15 @@
       <div class="flow mono">→</div>
       <div class="stage"><span class="sn mono">02b</span><span class="sl">TLSF matrix</span><span class="ss">bitmap good-fit + coalescing</span></div>
     </div>
+
+    <p class="principle"><span class="lead">isolation →</span> each thread owns a private slab + TLSF arena, carved from the shared region with one atomic compare-and-swap. The hot path takes no locks and no syscalls; a block freed by another thread is queued lock-free to its owner and reclaimed on that owner's next allocation — never touched in place.</p>
+  </section>
+
+  <!-- ================= 01 ARCHITECTURE ================= -->
+  <section id="arch">
+    <div class="section-head"><span class="section-no mono">01</span><h2>Dual-engine architecture</h2></div>
+
+    <p>The two engines never compete for the same request, and neither pays the general-purpose overhead the other would impose.</p>
 
     <h3>Slab engine — fixed-size records</h3>
     <p>Each slab pool pre-carves a block into identical slots. A free slot stores the "next free" pointer <em>inside its own memory</em> (an intrusive free-list), so allocation and deallocation are single pointer swaps with <strong>zero per-object header</strong> — live allocations are raw pointers, which keeps cache lines dense and alignment intact. Routing a free back to the right engine without a header is solved by an address-range registry rather than a tag byte.</p>
@@ -188,12 +194,18 @@
       <div class="data-table" data-chart="targets"></div>
       <figcaption><span class="fignum">Tbl. 2</span> &nbsp;PRD targets vs. measured results (filled dot = met). The throughput goal was framed against glibc <span class="mono">ptmalloc</span>; against this platform's far stronger libc allocator the margin is naturally smaller, while every determinism, fragmentation, and safety target is met.</figcaption>
     </figure>
+
+    <figure class="table-figure" id="report-figure">
+      <div class="data-table" data-chart="report"></div>
+      <figcaption><span class="fignum">Tbl. 3</span> &nbsp;Full measured report — every value produced by a single live run of the metrics harness.</figcaption>
+    </figure>
+
   </section>
 
   <!-- ================= COLOPHON ================= -->
   <section class="colophon">
-    <div class="section-head"><span class="section-no mono">·</span><h2>Colophon</h2></div>
-    <p>Allocator and benchmarks are C++17 (no third-party allocator code). Every figure is generated from a live run: <span class="mono">export_data.py</span> builds and runs the metrics binary, which replays the synthetic HFT trace through both allocators and writes <span class="mono">data.json</span>; this page renders it with hand-rolled dependency-free SVG and KaTeX, then headless Chrome prints it to PDF. No numbers are hand-entered.</p>
+    <h2 class="colophon-title">Colophon</h2>
+    <p>Allocator and benchmarks are C++17 (no third-party allocator code). Every figure comes from a live run — <span class="mono">export_data.py</span> replays the synthetic HFT trace through both allocators and writes <span class="mono">data.json</span>, which this page renders with hand-rolled SVG and KaTeX before headless Chrome prints it. No numbers are hand-entered.</p>
     <pre class="repro"><span class="c"># reproduce every figure in this note</span>
 cmake --preset release && cmake --build --preset release
 ctest --preset release        <span class="c"># 74 tests, also green under asan / tsan</span>

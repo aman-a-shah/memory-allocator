@@ -228,7 +228,9 @@
       ["Worst-case time complexity", "O(1)", "O(1) — flat across 16 B–64 KB", true],
       ["Throughput vs system malloc", "≥6× (vs glibc)", fmt.num1(h.speedup_slab) + "–" + fmt.num1(h.speedup_tlsf) + "× (vs Apple libc)", false],
       ["Memory fragmentation", "<3%", fmt.num2(h.fragmentation_pct) + "%", h.fragmentation_pct < 3],
-      ["Latency determinism (tail)", "tight p99.9", fmt.num1(h.tail_ratio) + "× tighter at p99.9", true],
+      ["Latency determinism (tail)", "tight p99.9",
+        "p99.9 " + (h.p999_custom_ns < 41 ? "&lt;41" : Math.round(h.p999_custom_ns)) +
+        " ns vs malloc " + (h.p999_sys_ns >= 1000 ? fmt.compact(h.p999_sys_ns) : Math.round(h.p999_sys_ns)) + " ns", true],
       ["Hot-path kernel switches", "0", "0 (user-space arena)", true],
       ["Hot-path lock contention", "0", "lock-free (TSan-clean)", true],
     ];
@@ -236,6 +238,27 @@
     for (const [m, t, meas, pass] of rows)
       body += `<tr class="${pass ? "row-pass" : "row-fail"}"><td>${m}</td><td>${t}</td><td>${meas}</td></tr>`;
     node.innerHTML = `<table><thead><tr><th>PRD target</th><th>Goal</th><th>Measured</th></tr></thead><tbody>${body}</tbody></table>`;
+  };
+
+  T.report = (node, data) => {
+    const h = data.headline, tp = data.throughput, lp = data.latency_pct,
+          sc = data.scalability, st = data.stability;
+    const ns = (v) => v < 41 ? "&lt;41 ns" : (v >= 1000 ? fmt.compact(v) + " ns" : Math.round(v) + " ns");
+    const mops = (v) => fmt.num1(v) + " M ops/s";
+    const fp = st.footprint_mb[st.footprint_mb.length - 1];
+    const rows = [
+      ["Mixed throughput", mops(tp.custom_mops[2]), "Slab throughput", mops(tp.custom_mops[0])],
+      ["TLSF throughput", mops(tp.custom_mops[1]), "Speedup vs malloc (mixed)", fmt.num1(h.speedup_mixed) + "×"],
+      ["p50 latency", ns(lp.custom_ns[0]), "p99 latency", ns(lp.custom_ns[2])],
+      ["p99.9 latency", ns(lp.custom_ns[3]), "Tail vs malloc (p99.9)", fmt.num1(h.tail_ratio) + "×"],
+      ["Fragmentation", fmt.num2(h.fragmentation_pct) + "%", "Resident footprint", fmt.num1(fp) + " MB"],
+      ["Throughput, 1 thread", mops(sc.custom_mops[0]), "Throughput, 8 threads", mops(sc.custom_mops[sc.custom_mops.length - 1])],
+      ["Scaling, 1 → 8 threads", fmt.num1(sc.custom_mops[sc.custom_mops.length - 1] / sc.custom_mops[0]) + "×", "Events replayed", fmt.compact(h.events)],
+    ];
+    let body = "";
+    for (const [k1, v1, k2, v2] of rows)
+      body += `<tr><td>${k1}</td><td>${v1}</td><td>${k2}</td><td>${v2}</td></tr>`;
+    node.innerHTML = `<table class="report-table"><tbody>${body}</tbody></table>`;
   };
 
   /* === plumbing — copy verbatim === */

@@ -12,7 +12,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
 PORT="${PORT:-8033}"
-OUT="$HERE/research-note.pdf"
+OUT="$HERE/deterministic-allocator.pdf"
 HOST=127.0.0.1
 
 CHROME=""

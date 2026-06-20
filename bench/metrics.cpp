@@ -274,14 +274,20 @@ int main(int argc, char** argv) {
 
     // ---- 2. Latency distribution + percentiles (HFT mixed) ----------------
     std::fprintf(stderr, "[metrics] latency...\n");
-    std::vector<double> lat_c, lat_s;
-    {
+    // Pool several passes: the tail is partly OS-stall noise (page faults,
+    // preemptions) that hits either allocator, so one pass gives an unstable
+    // ratio. Pooling ~5 passes (≈6M samples) makes p99/p99.9 representative.
+    std::vector<double> lat_c, lat_s, lat_tmp;
+    constexpr int kLatPasses = 5;
+    for (int pass = 0; pass < kLatPasses; ++pass) {
         CustomEngine ce(big_cfg());
-        replay_collect_latency(ce, mixed, kMaxLive, overhead, lat_c);
+        replay_collect_latency(ce, mixed, kMaxLive, overhead, lat_tmp);
+        lat_c.insert(lat_c.end(), lat_tmp.begin(), lat_tmp.end());
     }
-    {
+    for (int pass = 0; pass < kLatPasses; ++pass) {
         SystemEngine se;
-        replay_collect_latency(se, mixed, kMaxLive, overhead, lat_s);
+        replay_collect_latency(se, mixed, kMaxLive, overhead, lat_tmp);
+        lat_s.insert(lat_s.end(), lat_tmp.begin(), lat_tmp.end());
     }
     std::vector<double> pc = pct_tuple(lat_c);
     std::vector<double> ps = pct_tuple(lat_s);

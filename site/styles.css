@@ -60,9 +60,9 @@ p { text-wrap: pretty; }
 
 h1 {
   font-weight: 600;
-  font-size: clamp(2.9rem, 1.8rem + 5.4vw, 5.6rem);
-  letter-spacing: -0.025em;
-  line-height: 1.02;
+  font-size: clamp(2.3rem, 1.7rem + 2.2vw, 3.4rem);
+  letter-spacing: -0.02em;
+  line-height: 1.04;
 }
 .lede {
   font-weight: 360;
@@ -105,15 +105,14 @@ section + section { border-top: 1px solid var(--rule); }
 .masthead { padding-top: clamp(2.4rem, 6vw, 4.4rem); }
 .dateline {
   font-family: var(--mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-size: 0.82rem;            /* 9.84pt to match reference */
+  letter-spacing: -0.005em;
   color: var(--muted);
-  text-transform: uppercase;
   margin-bottom: 1.4rem;
 }
-.dateline .crimson { color: var(--accent-ink); }
-.masthead h1 { margin-bottom: 1.2rem; max-width: 18ch; }
-.masthead .lede { max-width: 54ch; margin-bottom: 2rem; }
+.dateline .crimson { color: var(--accent-ink); font-weight: 600; }
+.masthead h1 { margin-bottom: 0.55rem; }
+.masthead .lede { max-width: var(--maxw); line-height: 1.45; margin-bottom: 1.5rem; }
 .byline { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); margin-bottom: 2rem; }
 .byline span { color: var(--ink); }
 
@@ -136,27 +135,36 @@ section + section { border-top: 1px solid var(--rule); }
 }
 .abstract-stats dd small { font-size: 0.55em; color: var(--muted); font-weight: 400; }
 
-/* ---- TOC ---------------------------------------------------------------- */
+/* ---- TOC (horizontal hairline row) ------------------------------------- */
 .toc {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 0;
-  border-top: 1px solid var(--rule);
-  margin-top: 2.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.8rem;
+  border-block: 1px solid var(--rule);
+  padding: 0.8rem 0;
+  margin-top: 2rem;
 }
 .toc a {
   border: 0;
-  border-left: 1px solid var(--rule-soft);
-  padding: 0.9rem 1rem;
-  display: flex;
-  gap: 0.6rem;
+  padding: 0;
+  display: inline-flex;
+  gap: 0.55rem;
   align-items: baseline;
   color: var(--body);
 }
-.toc a:first-child { border-left: 0; padding-left: 0; }
-.toc a:hover { background: var(--paper-3); }
-.toc .n { font-family: var(--mono); font-size: 0.78rem; color: var(--accent-ink); }
-.toc .t { font-size: 0.92rem; }
+.toc a:hover { color: var(--accent-ink); }
+.toc .n { font-family: var(--mono); font-size: 0.82rem; color: var(--accent-ink); }
+.toc .t { font-size: 0.95rem; }
+
+/* ---- principle callout (key invariant, dashed rules) ------------------- */
+.principle {
+  border-block: 1px dashed var(--rule);
+  padding: 0.95rem 0;
+  margin: 1.6rem auto;
+  max-width: var(--maxw);
+  color: var(--body);
+}
+.principle .lead { font-family: var(--mono); color: var(--accent-ink); letter-spacing: -0.01em; }
 
 /* ---- section heading ---------------------------------------------------- */
 .section-head { display: flex; align-items: baseline; gap: 0.9rem; margin-bottom: 1.3rem; }
@@ -178,7 +186,7 @@ figcaption { font-size: 0.86rem; color: var(--muted); margin-top: 0.85rem; max-w
 /* ---- chart primitives (renderers reference these) ---------------------- */
 .c-grid { stroke: var(--rule-soft); }
 .c-axis { stroke: var(--rule); }
-.c-tick { fill: var(--faint); font: 10px var(--mono); }
+.c-tick { fill: var(--faint); font: 12px var(--mono); }
 .c-tick-x { text-anchor: middle; }
 .c-tick-y { text-anchor: end; }
 .c-line { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
@@ -196,11 +204,11 @@ figcaption { font-size: 0.86rem; color: var(--muted); margin-top: 0.85rem; max-w
 .c-bar { fill: var(--data2); }
 .c-bar-accent { fill: var(--accent); }
 .c-marker { stroke: var(--accent); stroke-width: 1.4; }
-.c-marker-label { fill: var(--accent-ink); font: 10px var(--mono); }
-.c-legend { font: 11px var(--mono); fill: var(--muted); }
-.c-axis-label { fill: var(--muted); font: 10px var(--mono); }
-.c-val { fill: var(--ink); font: 10px var(--mono); }
-.c-val-accent { fill: var(--accent-ink); font: 10px var(--mono); }
+.c-marker-label { fill: var(--accent-ink); font: 12px var(--mono); }
+.c-legend { font: 13px var(--mono); fill: var(--muted); }
+.c-axis-label { fill: var(--muted); font: 12px var(--mono); }
+.c-val { fill: var(--ink); font: 12px var(--mono); }
+.c-val-accent { fill: var(--accent-ink); font: 12px var(--mono); }
 
 /* ---- pipeline diagram --------------------------------------------------- */
 .pipeline { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 1.6rem auto; max-width: var(--figw); }
@@ -258,6 +266,16 @@ tbody td {
 }
 tbody td:first-child { font-family: var(--serif); color: var(--body); }
 tbody tr:hover { background: var(--paper-3); }
+
+/* two-column label/value performance report (no header row) */
+.report-table { border-top: 1px solid var(--ink); }
+.report-table td:nth-child(1), .report-table td:nth-child(3) {
+  text-align: left; font-family: var(--serif); color: var(--body);
+}
+.report-table td:nth-child(2), .report-table td:nth-child(4) {
+  text-align: right; font-family: var(--mono); color: var(--ink); font-feature-settings: "tnum" 1;
+}
+.report-table td:nth-child(3) { padding-left: 1.8rem; border-left: 1px solid var(--rule-soft); }
 .row-pass td:first-child::before,
 .row-fail td:first-child::before {
   content: "";
@@ -297,6 +315,7 @@ td.pos { color: var(--accent-ink); }
 
 /* ---- colophon ----------------------------------------------------------- */
 .colophon { background: var(--paper-2); }
+.colophon-title { font-size: clamp(1.6rem, 1.3rem + 1vw, 2.1rem); margin-bottom: 0.6rem; }
 .colophon .repro {
   background: var(--ink);
   color: var(--paper);
@@ -342,7 +361,7 @@ td.pos { color: var(--accent-ink); }
 /* ============================================================================
    PRINT — the canonical deliverable (per §11)
    ========================================================================== */
-@page { size: Letter; margin: 14mm 15mm 15mm; }
+@page { size: Letter; margin: 15mm 16mm 16mm; }   /* match reference content box (left x≈45pt) */
 
 @media print {
   /* 1. preserve color */
@@ -376,25 +395,37 @@ td.pos { color: var(--accent-ink); }
   table { font-size: 8.7pt; width: 100%; }
   thead th, tbody td { white-space: nowrap; padding-inline: 0.55rem; }
 
-  /* 6. density + per-chart print heights */
-  body { font-size: 9.7pt; line-height: 1.45; }
-  .masthead { padding: 0 0 0.5rem; } .masthead h1 { font-size: 2.6rem; }
-  .masthead .lede { font-size: 1.02rem; }
-  section { padding-block: 0.7rem; } .prose > p { margin-bottom: 0.55rem; }
-  figure { margin: 0.65rem auto; } figcaption { margin-top: 0.4rem; font-size: 0.82rem; }
-  .equation { margin: 0.7rem auto !important; }
-  .abstract-stats, .toc, .param-grid, .throughput { margin: 0.7rem auto; }
-  .pipeline { margin: 0.7rem auto; }
-  h3 { margin-top: 0.3rem; }
+  /* 6. density + per-chart print heights — generous, matching the reference's
+        airy editorial rhythm (it runs ~8 pages on purpose; we don't cram). */
+  /* Type sizes measured to match the reference PDFs exactly (pt from their text
+     objects): body 10.0, h1 32.4 (2.7rem), lede 12.7 (1.06rem), h2 23.9. */
+  body { font-size: 10pt; line-height: 1.55; }
+  .masthead { padding: 0 0 0.8rem; } .masthead h1 { font-size: 2.7rem; line-height: 0.95; margin-bottom: 0.32rem; }
+  .masthead .lede { font-size: 1.06rem; line-height: 1.45; margin-top: -0.1rem; margin-bottom: 1rem; }
+  section { padding-block: 0.92rem; } .prose > p { margin-bottom: 0.72rem; }
+  figure { margin: 1rem auto; } figcaption { margin-top: 0.55rem; font-size: 0.85rem; }
+  /* KaTeX display math scales 1.21× its container; 1.05rem → ~15.2pt (ref). */
+  .equation { margin: 1.05rem auto !important; font-size: 1.05rem; }
+  .abstract-stats, .toc, .param-grid, .throughput { margin: 1rem auto; }
+  .pipeline { margin: 1rem auto; }
+  .principle { margin: 1.1rem auto; padding: 0.95rem 0; }
+  .toc { padding: 0.8rem 0; margin: 1.05rem auto; }
   p { orphans: 2; widows: 2; }
 
-  .chart { height: 178px; }
-  #fig-hero { height: 224px; }
-  #fig-throughput { height: 182px; }
-  #fig-bysize { height: 182px; }
-  #fig-scaling { height: 192px; }
-  #fig-frag { height: 170px; }
-  #fig-stability { height: 165px; }
+  /* Pin the big mono numbers to the reference's exact pt (clamp()+vw drift in
+     headless print): abstract-stats values 16.7pt, throughput callout 31.2pt. */
+  .abstract-stats dd { font-size: 16.7pt; }
+  .throughput .big { font-size: 31.2pt; }
+
+  .chart { height: 200px; }
+  #fig-hero { height: 198px; }
+  #fig-throughput { height: 200px; }
+  #fig-bysize { height: 150px; }
+  #fig-scaling { height: 156px; }
+  #fig-frag { height: 206px; }
+  #fig-stability { height: 200px; }
+  #report-figure { break-inside: avoid; }
+  .colophon { break-inside: avoid; }
 
   /* Compact the colophon so it packs onto the preceding page (no orphan). */
   .colophon { padding-block: 0.7rem; }
