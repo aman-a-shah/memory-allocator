@@ -6,25 +6,59 @@ allocation for low-latency / financial workloads. It reserves one large
 request to one of two purpose-built engines, with a lock-free per-thread layer
 on top.
 
-See [`plan.md`](plan.md) for the original spec, [`phases.md`](phases.md) for the
-phased plan, [`summary.md`](summary.md) for a complete technical reference, and
-[`pdf.md`](pdf.md) for the research note in markdown. The typeset research note
-is built under [`site/`](site/) → `site/deterministic-allocator.pdf`.
+---
 
-<p align="center">
-  <img src="docs/page-1.png" alt="Research note — page 1 (masthead + latency distribution)" width="720">
-</p>
+## Showcase report
 
-> **Status:** all phases complete. Single-thread dual-engine allocator
+A research note — **[`site/deterministic-allocator.pdf`](site/deterministic-allocator.pdf)** —
+walks through both engines with every figure rendered from a live run of the
+metrics suite (`site/export_data.py` replays a synthetic HFT trace through both
+allocators; no numbers are hand-entered). The pages:
+
+| | |
+|:---:|:---:|
+| ![p1](docs/page-1.png) | ![p3](docs/page-3.png) |
+| ![p4](docs/page-4.png) | ![p5](docs/page-5.png) |
+| ![p6](docs/page-6.png) | |
+
+Regenerate (re-runs the metrics → `data.json`, then prints via headless Chrome):
+
+```sh
+./site/build_pdf.sh
+```
+
+[`pdf.md`](pdf.md) is the same content in markdown.
+
+---
+
+```
+                 ┌───────────────────────────────┐
+                 │   OS Arena  (one mmap region)  │
+                 └───────────────┬───────────────┘
+                                 │  bump / CAS-carved sub-blocks
+              ┌──────────────────┴──────────────────┐
+              ▼                                      ▼
+   ┌────────────────────┐                ┌────────────────────────┐
+   │   Slab engine      │                │   TLSF engine          │
+   │ fixed-size records │                │ variable-size requests │
+   │ intrusive freelist │                │ 2-level bitmap index   │
+   │ zero header        │                │ split + coalesce       │
+   └────────────────────┘                └────────────────────────┘
+        ≤ 256 B fixed                          everything else
+```
+
+| | |
+|---|---|
+| **Throughput** | ~3–4.5× system `malloc` on the fixed-size path, ~2× on the mixed HFT trace |
+| **Latency** | p99.9 ~6–8× tighter; flat **O(1)** across 16 B–64 KB |
+| **Fragmentation** | **0.24%** of live bytes (target < 3%) |
+| **Scaling** | near-linear to 8 threads (~6× over 1→8) |
+| **Safety** | **74 unit tests** pass under Release, ASan, and TSan |
+
+> **Status:** all phases complete — single-thread dual-engine allocator
 > (arena + slab + TLSF), a lock-free multi-threaded layer (per-thread caches +
 > atomic-CAS global arena + lock-free remote-free queues), and a benchmark /
-> metrics suite vs the system allocator. **74 unit tests pass under Release,
-> ASan, and TSan.**
->
-> **Measured (Apple M4, vs libc `malloc`):** ~3–4.5× throughput on the
-> fixed-size path and ~2× on the mixed HFT trace, p99.9 latency ~6–8× tighter,
-> flat **O(1)** latency across request sizes, **0.24%** fragmentation, and
-> near-linear scaling to 8 threads (~6× over 1→8).
+> metrics suite vs the system allocator. Measured on Apple M4 vs libc `malloc`.
 
 ---
 
@@ -43,22 +77,6 @@ context switches and zero lock contention on the hot path.
 ---
 
 ## Architecture
-
-```
-                 ┌───────────────────────────────┐
-                 │   OS Arena  (one mmap region)  │
-                 └───────────────┬───────────────┘
-                                 │  bump / CAS-carved sub-blocks
-              ┌──────────────────┴──────────────────┐
-              ▼                                      ▼
-   ┌────────────────────┐                ┌────────────────────────┐
-   │   Slab engine      │                │   TLSF engine          │
-   │ fixed-size records │                │ variable-size requests │
-   │ intrusive freelist │                │ 2-level bitmap index   │
-   │ zero header        │                │ split + coalesce       │
-   └────────────────────┘                └────────────────────────┘
-        ≤ 256 B fixed                          everything else
-```
 
 A size router sends each request to one engine; a single-thread façade
 (`Allocator`) wraps both; a lock-free layer (`ConcurrentAllocator`) replicates
@@ -221,6 +239,7 @@ higher and size-dependent.
 ---
 
 ## Requirements
+
 - C++17 compiler (Apple clang / clang / gcc)
 - CMake ≥ 3.20
 - Network access on first configure (GoogleTest and Google Benchmark are
@@ -255,35 +274,17 @@ cmake --build --preset release --target memalloc_bench memalloc_metrics
 ./build/release/bench/memalloc_metrics /tmp/metrics.json
 ```
 
-## Research note (PDF)
+## Project layout
 
-An editorial, research-paper-style PDF is generated entirely from a live run —
-`export_data.py` replays the synthetic HFT trace through both allocators and
-writes `data.json`, which `index.html` renders with hand-rolled SVG charts +
-KaTeX, then headless Chrome prints it. No numbers are hand-entered.
+| Path | Contents |
+|------|----------|
+| `include/memalloc/` | Public headers (arena, slab, tlsf, allocator, concurrent) |
+| `src/` | Library implementation |
+| `tests/` | GoogleTest unit tests (incl. TSan-checked concurrency) |
+| `bench/` | HFT workload, Google Benchmark suite, metrics generator |
+| `site/` | Research-note PDF source (HTML/CSS/JS + `export_data.py`) |
+| `docs/` | Rendered PDF page images (above) |
 
-```sh
-./site/build_pdf.sh             # run metrics → data.json → site/deterministic-allocator.pdf
-```
-
-[`pdf.md`](pdf.md) is the same content in markdown. Selected pages:
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/page-3.png" alt="02 Throughput" width="100%"></td>
-    <td width="50%"><img src="docs/page-4.png" alt="03 Latency &amp; determinism" width="100%"></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/page-5.png" alt="04 Concurrency &amp; scaling" width="100%"></td>
-    <td width="50%"><img src="docs/page-6.png" alt="05 Fragmentation, stability &amp; results" width="100%"></td>
-  </tr>
-</table>
-
-## Layout
-```
-include/memalloc/   public headers (arena, slab, tlsf, allocator, concurrent)
-src/                library implementation
-tests/              GoogleTest unit tests (incl. TSan-checked concurrency)
-bench/              HFT workload, Google Benchmark suite, metrics generator
-site/               research-note PDF source (HTML/CSS/JS + export_data.py)
-```
+For a deeper dive see [`summary.md`](summary.md) (complete technical reference),
+[`plan.md`](plan.md) (original spec), [`phases.md`](phases.md) (phased plan), and
+[`pdf.md`](pdf.md) (research note in markdown).
